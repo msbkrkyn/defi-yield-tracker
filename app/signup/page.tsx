@@ -15,81 +15,141 @@ export default function SignUp() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  // Basit kayıt fonksiyonu
+  // Production ready signup function
   const signUpUser = async (email: string, password: string, referralCode?: string) => {
     try {
-      // Import et
+      console.log('Starting signup process...')
+      
+      // Dynamic import to ensure client-side only
       const { createClient } = await import('@supabase/supabase-js')
       
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      console.log('Supabase URL exists:', !!supabaseUrl)
+      console.log('Supabase Key exists:', !!supabaseKey)
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase configuration missing')
+      }
 
-      // 1. Auth kayıt
+      const supabase = createClient(supabaseUrl, supabaseKey)
+
+      console.log('Attempting auth signup...')
+      
+      // 1. Auth signup
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
       })
 
-      if (authError) throw authError
+      console.log('Auth result:', { authData, authError })
+
+      if (authError) {
+        console.error('Auth error:', authError)
+        throw authError
+      }
 
       if (authData.user) {
-        // 2. Referral kodu oluştur
+        console.log('Auth successful, creating profile...')
+        
+        // 2. Generate referral code
         const userReferralCode = Math.random().toString(36).substring(2, 10).toUpperCase()
+        console.log('Generated referral code:', userReferralCode)
 
-        // 3. Profil oluştur
-        const { error: profileError } = await supabase
+        // 3. Try to create profile with detailed error handling
+        const profileData = {
+          id: authData.user.id,
+          email: email,
+          referral_code: userReferralCode,
+          referred_by: referralCode || null,
+          referral_count: 0,
+          is_premium: false,
+        }
+        
+        console.log('Inserting profile data:', profileData)
+
+        const { data: profileResult, error: profileError } = await supabase
           .from('users')
-          .insert([{
-            id: authData.user.id,
-            email: email,
-            referral_code: userReferralCode,
-            referred_by: referralCode || null,
-            referral_count: 0,
-            is_premium: false,
-          }])
+          .insert([profileData])
+          .select()
+
+        console.log('Profile insert result:', { profileResult, profileError })
 
         if (profileError) {
-          console.error('Profile error:', profileError)
-          throw new Error('Profil oluşturulurken hata oluştu')
+          console.error('Profile error details:', {
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            code: profileError.code
+          })
+          
+          // More specific error handling
+          if (profileError.code === '23505') {
+            throw new Error('Bu email adresi zaten kullanımda')
+          } else if (profileError.code === '42501') {
+            throw new Error('Veritabanı izin hatası. Lütfen daha sonra tekrar deneyin.')
+          } else {
+            throw new Error(`Profil oluşturma hatası: ${profileError.message}`)
+          }
         }
 
-        // 4. Referral işlemleri
+        console.log('Profile created successfully')
+
+        // 4. Handle referral if provided
         if (referralCode) {
-          const { data: referrer } = await supabase
+          console.log('Processing referral code:', referralCode)
+          
+          const { data: referrer, error: referrerError } = await supabase
             .from('users')
             .select('id, referral_count')
-            .eq('referral_code', referralCode)
+            .eq('referral_code', referralCode.toUpperCase())
             .single()
 
-          if (referrer) {
-            // Referral kaydı ekle
-            await supabase
+          if (!referrerError && referrer) {
+            console.log('Found referrer:', referrer)
+            
+            // Add referral record
+            const { error: referralError } = await supabase
               .from('referrals')
               .insert([{
                 referrer_id: referrer.id,
                 referred_id: authData.user.id,
               }])
 
-            // Referrer sayısını güncelle
-            const newCount = (referrer.referral_count || 0) + 1
-            await supabase
-              .from('users')
-              .update({ 
-                referral_count: newCount,
-                is_premium: newCount >= 5,
-                premium_until: newCount >= 5 ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null
-              })
-              .eq('id', referrer.id)
+            if (!referralError) {
+              // Update referrer count
+              const newCount = (referrer.referral_count || 0) + 1
+              await supabase
+                .from('users')
+                .update({ 
+                  referral_count: newCount,
+                  is_premium: newCount >= 5,
+                  premium_until: newCount >= 5 ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null
+                })
+                .eq('id', referrer.id)
+              
+              console.log('Referral processed successfully')
+            }
+          } else {
+            console.log('Referral code not found or error:', referrerError)
           }
         }
+
+        return { data: authData, error: null }
+      } else {
+        throw new Error('User creation failed - no user data returned')
       }
 
-      return { data: authData, error: null }
     } catch (error: any) {
-      console.error('SignUp error:', error)
-      return { data: null, error: error.message || 'Beklenmeyen hata' }
+      console.error('Signup error:', error)
+      return { 
+        data: null, 
+        error: error.message || 'Beklenmeyen hata oluştu' 
+      }
     }
   }
 
@@ -98,7 +158,7 @@ export default function SignUp() {
     setError('')
     setLoading(true)
 
-    // Validasyon
+    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Şifreler eşleşmiyor')
       setLoading(false)
@@ -112,6 +172,11 @@ export default function SignUp() {
     }
 
     try {
+      console.log('Starting signup with:', { 
+        email: formData.email, 
+        hasReferral: !!formData.referralCode 
+      })
+
       const { data, error: signUpError } = await signUpUser(
         formData.email,
         formData.password,
@@ -119,14 +184,17 @@ export default function SignUp() {
       )
 
       if (signUpError) {
+        console.error('Signup failed:', signUpError)
         setError(signUpError)
       } else {
+        console.log('Signup successful!')
         setSuccess(true)
         setTimeout(() => {
           router.push('/dashboard')
         }, 2000)
       }
     } catch (err: any) {
+      console.error('Unexpected error:', err)
       setError(err.message || 'Beklenmeyen bir hata oluştu')
     }
 
@@ -257,6 +325,12 @@ export default function SignUp() {
           {error && (
             <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-4">
               <p className="text-red-300 text-sm">{error}</p>
+              <details className="mt-2">
+                <summary className="text-red-400 text-xs cursor-pointer">Teknik detaylar</summary>
+                <p className="text-red-400 text-xs mt-1">
+                  Eğer bu hata devam ederse, lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.
+                </p>
+              </details>
             </div>
           )}
 
@@ -287,6 +361,17 @@ export default function SignUp() {
             <Link href="/login" className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
               Giriş Yap
             </Link>
+          </p>
+        </div>
+
+        {/* Debug Info (will remove in production) */}
+        <div className="mt-6 bg-gray-900/50 rounded-xl p-4 border border-gray-700">
+          <p className="text-gray-400 text-xs mb-2">Debug Info:</p>
+          <p className="text-gray-500 text-xs">
+            Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Configured' : '❌ Missing'}
+          </p>
+          <p className="text-gray-500 text-xs">
+            Supabase Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Configured' : '❌ Missing'}
           </p>
         </div>
 
