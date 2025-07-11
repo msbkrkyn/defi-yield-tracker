@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+// MUTLAK YOL:
 import { generateProtocolLink, protocolLinks } from '../utils/protocolLinks'
 
 // Basit dil sistemi

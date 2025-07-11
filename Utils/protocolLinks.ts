@@ -1,5 +1,5 @@
 // utils/protocolLinks.ts
-// Basit DeFi protokol bağlantıları
+// DeFi protokol bağlantıları ve komisyon sistemi
 
 export interface ProtocolLink {
   name: string;
@@ -93,17 +93,68 @@ export const protocolLinks: Record<string, ProtocolLink> = {
     baseUrl: 'https://raydium.io',
     commission: 0.03,
     category: 'DEX'
+  },
+  'orca': {
+    name: 'Orca',
+    logo: '🐋',
+    baseUrl: 'https://orca.so',
+    commission: 0.02,
+    category: 'DEX'
+  },
+  'jupiter': {
+    name: 'Jupiter',
+    logo: '🪐',
+    baseUrl: 'https://jup.ag',
+    commission: 0.025,
+    category: 'DEX'
+  },
+  'lido': {
+    name: 'Lido',
+    logo: '🟡',
+    baseUrl: 'https://lido.fi',
+    commission: 0.05,
+    category: 'Staking'
+  },
+  'convex': {
+    name: 'Convex Finance',
+    logo: '⚡',
+    baseUrl: 'https://convexfinance.com',
+    commission: 0.04,
+    category: 'Yield'
+  },
+  'yearn': {
+    name: 'Yearn Finance',
+    logo: '🔵',
+    baseUrl: 'https://yearn.fi',
+    commission: 0.06,
+    category: 'Yield'
   }
 };
 
-// Basit link oluşturma fonksiyonu
+// Protokol linkini oluştur
 export function generateProtocolLink(projectName: string): string {
   const protocol = protocolLinks[projectName.toLowerCase()];
   
   if (!protocol) {
+    // Fallback - DeFiLlama protokol sayfası
     return `https://defillama.com/protocol/${projectName}`;
   }
 
-  // Basit referral link oluştur
-  return `${protocol.baseUrl}?ref=defi-yield-tracker`;
+  // Referral parametresi ile protokol linkini oluştur
+  const hasQuery = protocol.baseUrl.includes('?');
+  const separator = hasQuery ? '&' : '?';
+  
+  return `${protocol.baseUrl}${separator}ref=defi-yield-tracker`;
+}
+
+// Protokol komisyon bilgisini al
+export function getProtocolCommission(projectName: string): number {
+  const protocol = protocolLinks[projectName.toLowerCase()];
+  return protocol?.commission || 0;
+}
+
+// Protokol kategorisini al
+export function getProtocolCategory(projectName: string): string {
+  const protocol = protocolLinks[projectName.toLowerCase()];
+  return protocol?.category || 'Unknown';
 }
