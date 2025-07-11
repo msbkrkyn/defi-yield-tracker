@@ -1,44 +1,47 @@
-// GÜVENLI YÖNTEMİ: Mevcut app/page.tsx dosyasına sadece dil seçiciyi ekleyelim
-
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { generateProtocolLink, protocolLinks } from '../utils/protocolLinks'
 
-// YENİ: Basit dil sistemi ekleyelim
+// Basit dil sistemi
 const texts = {
   tr: {
     title: 'DeFi Yield Tracker',
-    hero: 'Track the Highest DeFi Yields',
+    hero: 'En Yüksek DeFi Yield\'leri Takip Et',
     subtitle: 'Gerçek zamanlı DeFi yield verileri! En yüksek APY\'leri keşfet, riskleri analiz et, kripto kazancını maksimize et.',
-    getStarted: 'Get Started',
+    getStarted: 'Ücretsiz Başla',
+    login: 'Giriş Yap',
     loading: 'Yield verileri yükleniyor...',
-    lastUpdate: 'Son güncelleme'
+    lastUpdate: 'Son güncelleme',
+    goToProtocol: 'Protocol\'e Git',
+    commission: 'Komisyon'
   },
   en: {
     title: 'DeFi Yield Tracker',
     hero: 'Track the Highest DeFi Yields',
     subtitle: 'Real-time DeFi yield data! Discover the highest APYs, analyze risks, and maximize your crypto earnings.',
-    getStarted: 'Get Started',
+    getStarted: 'Get Started Free',
+    login: 'Login',
     loading: 'Loading yield data...',
-    lastUpdate: 'Last update'
+    lastUpdate: 'Last update',
+    goToProtocol: 'Go to Protocol',
+    commission: 'Commission'
   }
 }
 
-// Basit dil seçici component
+// Basit dil seçici
 function LanguageToggle({ language, setLanguage }: { language: string, setLanguage: (lang: string) => void }) {
   return (
-    <div className="flex items-center space-x-2">
-      <button
-        onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-        className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition-colors border border-white/20 text-white text-sm"
-      >
-        {language === 'tr' ? '🇹🇷 TR' : '🇺🇸 EN'}
-      </button>
-    </div>
+    <button
+      onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
+      className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition-colors border border-white/20 text-white text-sm"
+    >
+      {language === 'tr' ? '🇹🇷 TR' : '🇺🇸 EN'}
+    </button>
   )
 }
 
-// DeFi API types (aynı)
+// DeFi API types
 interface YieldData {
   pool: string;
   chain: string;
@@ -52,105 +55,101 @@ interface YieldData {
   stablecoin: boolean;
 }
 
-// API fonksiyonları (aynı)
-async function fetchTopYields(): Promise<YieldData[]> {
-  try {
-    const response = await fetch('https://yields.llama.fi/pools');
-    const data = await response.json();
-    
-    return data.data
-      .filter((pool: YieldData) => 
-        pool.apy > 0 && 
-        pool.apy < 1000 && 
-        pool.tvlUsd > 100000 &&
-        pool.project && 
-        pool.symbol
-      )
-      .sort((a: YieldData, b: YieldData) => b.apy - a.apy)
-      .slice(0, 8);
-  } catch (error) {
-    console.error('Error fetching yields:', error);
-    return [];
-  }
-}
-
-function calculateRiskScore(pool: YieldData): {
-  level: 'Low' | 'Medium' | 'High';
-  color: string;
-} {
-  let riskScore = 0;
-  
-  if (pool.apy > 50) riskScore += 2;
-  else if (pool.apy > 20) riskScore += 1;
-  
-  if (pool.tvlUsd < 1000000) riskScore += 1;
-  if (pool.il7d && pool.il7d > 2) riskScore += 1;
-  if (pool.stablecoin) riskScore -= 1;
-  
-  riskScore = Math.max(0, Math.min(3, riskScore));
-  
-  if (riskScore <= 1) {
-    return { level: 'Low', color: 'bg-green-500/20 text-green-400' };
-  } else if (riskScore === 2) {
-    return { level: 'Medium', color: 'bg-yellow-500/20 text-yellow-400' };
-  } else {
-    return { level: 'High', color: 'bg-red-500/20 text-red-400' };
-  }
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-  return num.toFixed(0);
-}
-
-function formatAPY(apy: number): string {
-  if (apy >= 100) return apy.toFixed(0) + '%';
-  if (apy >= 10) return apy.toFixed(1) + '%';
-  return apy.toFixed(2) + '%';
-}
-
-function getProtocolLogo(project: string): string {
-  const logos: Record<string, string> = {
-    uniswap: '🦄', 'uniswap-v3': '🦄', aave: '👻', 'aave-v2': '👻', 'aave-v3': '👻',
-    compound: '🏛️', curve: '🌀', balancer: '⚖️', sushiswap: '🍣', pancakeswap: '🥞'
-  };
-  return logos[project.toLowerCase()] || '💰';
-}
-
-function getChainLogo(chain: string): string {
-  const chains: Record<string, string> = {
-    ethereum: '🔷', polygon: '🟣', arbitrum: '🔵', optimism: '🔴', 
-    avalanche: '⚪', bsc: '🟡', fantom: '👻', solana: '🟢'
-  };
-  return chains[chain.toLowerCase()] || '⚪';
-}
-
 export default function Home() {
-  // YENİ: Dil state'i ekle
   const [language, setLanguage] = useState('tr')
   const t = texts[language as keyof typeof texts]
-  
-  const [yields, setYields] = useState<YieldData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<string>('');
+  const [yields, setYields] = useState<YieldData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState<string>('')
 
   useEffect(() => {
     const loadYields = async () => {
-      setLoading(true);
-      const data = await fetchTopYields();
-      setYields(data);
-      setLastUpdate(new Date().toLocaleTimeString());
-      setLoading(false);
-    };
+      setLoading(true)
+      const data = await fetchTopYields()
+      setYields(data)
+      setLastUpdate(new Date().toLocaleTimeString())
+      setLoading(false)
+    }
 
-    loadYields();
+    loadYields()
+    const interval = setInterval(loadYields, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // API functions
+  async function fetchTopYields(): Promise<YieldData[]> {
+    try {
+      const response = await fetch('https://yields.llama.fi/pools')
+      const data = await response.json()
+      
+      return data.data
+        .filter((pool: YieldData) => 
+          pool.apy > 0 && 
+          pool.apy < 1000 && 
+          pool.tvlUsd > 100000 &&
+          pool.project && 
+          pool.symbol
+        )
+        .sort((a: YieldData, b: YieldData) => b.apy - a.apy)
+        .slice(0, 8)
+    } catch (error) {
+      console.error('Error fetching yields:', error)
+      return []
+    }
+  }
+
+  const calculateRiskScore = (pool: YieldData) => {
+    let riskScore = 0
+    if (pool.apy > 50) riskScore += 2
+    else if (pool.apy > 20) riskScore += 1
+    if (pool.tvlUsd < 1000000) riskScore += 1
+    if (pool.stablecoin) riskScore -= 1
+    riskScore = Math.max(0, Math.min(3, riskScore))
     
-    // Her 5 dakikada bir güncelle
-    const interval = setInterval(loadYields, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (riskScore <= 1) return { level: language === 'tr' ? 'Düşük' : 'Low', color: 'bg-green-500/20 text-green-400' }
+    else if (riskScore === 2) return { level: language === 'tr' ? 'Orta' : 'Medium', color: 'bg-yellow-500/20 text-yellow-400' }
+    else return { level: language === 'tr' ? 'Yüksek' : 'High', color: 'bg-red-500/20 text-red-400' }
+  }
+
+  const formatNumber = (num: number): string => {
+    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B'
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M'
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K'
+    return num.toFixed(0)
+  }
+
+  const formatAPY = (apy: number): string => {
+    if (apy >= 100) return apy.toFixed(0) + '%'
+    if (apy >= 10) return apy.toFixed(1) + '%'
+    return apy.toFixed(2) + '%'
+  }
+
+  const getProtocolLogo = (project: string): string => {
+    const protocol = protocolLinks[project.toLowerCase()]
+    return protocol?.logo || '💰'
+  }
+
+  const getChainLogo = (chain: string): string => {
+    const chains: Record<string, string> = {
+      ethereum: '🔷', polygon: '🟣', arbitrum: '🔵', optimism: '🔴', 
+      avalanche: '⚪', bsc: '🟡', fantom: '👻', solana: '🟢'
+    }
+    return chains[chain.toLowerCase()] || '⚪'
+  }
+
+  const handleProtocolClick = (projectName: string) => {
+    const link = generateProtocolLink(projectName)
+    
+    // Analytics tracking
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'protocol_click', {
+        protocol_name: projectName,
+        source: 'homepage_table'
+      })
+    }
+    
+    window.open(link, '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
@@ -170,7 +169,6 @@ export default function Home() {
                   {t.lastUpdate}: {lastUpdate}
                 </span>
               )}
-              {/* YENİ: Dil seçici ekle */}
               <LanguageToggle language={language} setLanguage={setLanguage} />
               <Link href="/signup" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105">
                 {t.getStarted}
@@ -191,15 +189,50 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105">
-              🚀 {language === 'tr' ? 'Ücretsiz Başla' : 'Get Started Free'}
+              🚀 {t.getStarted}
             </Link>
             <Link href="/login" className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all border border-white/20">
-              📊 {language === 'tr' ? 'Giriş Yap' : 'Login'}
+              📊 {t.login}
             </Link>
           </div>
         </div>
 
-        {/* Stats - Aynı kalacak, sadece birkaç text değişecek */}
+        {/* New Info Banner */}
+        <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl p-6 border border-green-500/30 mb-16">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-white mb-4">💰 {language === 'tr' ? 'Tamamen Ücretsiz!' : 'Completely Free!'}</h3>
+            <p className="text-xl text-gray-300 mb-4">
+              {language === 'tr' ? 
+                'Hiçbir ücret ödemeden DeFi protokollerine bağlan. Sadece küçük komisyonlar protokollerden alınır.' :
+                'Connect to DeFi protocols without any fees. Only small commissions are taken from protocols.'
+              }
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">🦄</div>
+                <div className="text-white font-semibold text-sm">Uniswap</div>
+                <div className="text-green-400 text-xs">%0.05 {t.commission}</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">👻</div>
+                <div className="text-white font-semibold text-sm">Aave</div>
+                <div className="text-green-400 text-xs">%0.1 {t.commission}</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">☀️</div>
+                <div className="text-white font-semibold text-sm">Raydium</div>
+                <div className="text-green-400 text-xs">%0.03 {t.commission}</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">🌀</div>
+                <div className="text-white font-semibold text-sm">Curve</div>
+                <div className="text-green-400 text-xs">%0.04 {t.commission}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
         <div className="grid md:grid-cols-4 gap-6 mb-16">
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 text-center">
             <div className="text-3xl font-bold text-green-400">{yields.length}</div>
@@ -223,7 +256,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Yield Table - Sadece başlık ve loading text değişecek */}
+        {/* Updated Yield Table with Protocol Links */}
         <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 overflow-hidden">
           <div className="p-6 border-b border-white/20">
             <div className="flex justify-between items-center">
@@ -232,7 +265,10 @@ export default function Home() {
                   🔥 {language === 'tr' ? 'En Yüksek Yield\'ler' : 'Top Yields'}
                 </h3>
                 <p className="text-gray-300 mt-2">
-                  {language === 'tr' ? 'Gerçek zamanlı DeFi protokol verileri' : 'Real-time DeFi protocol data'}
+                  {language === 'tr' ? 
+                    'Gerçek zamanlı DeFi protokol verileri - Direkt bağlan ve yatırım yap!' :
+                    'Real-time DeFi protocol data - Connect directly and invest!'
+                  }
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -264,11 +300,16 @@ export default function Home() {
                       {language === 'tr' ? 'Risk' : 'Risk'}
                     </th>
                     <th className="text-left p-4 text-gray-300 font-semibold">TVL</th>
+                    <th className="text-left p-4 text-gray-300 font-semibold">
+                      {language === 'tr' ? 'İşlem' : 'Action'}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {yields.map((pool, index) => {
-                    const risk = calculateRiskScore(pool);
+                    const risk = calculateRiskScore(pool)
+                    const protocol = protocolLinks[pool.project.toLowerCase()]
+                    
                     return (
                       <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
                         <td className="p-4">
@@ -283,6 +324,11 @@ export default function Home() {
                               <div className="text-gray-400 text-sm">
                                 {pool.pool.substring(0, 8)}...
                               </div>
+                              {protocol && (
+                                <div className="text-green-400 text-xs">
+                                  %{protocol.commission} {t.commission}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -319,10 +365,7 @@ export default function Home() {
                         </td>
                         <td className="p-4">
                           <span className={`px-2 py-1 rounded-lg text-sm font-medium ${risk.color}`}>
-                            {language === 'tr' ? 
-                              (risk.level === 'Low' ? 'Düşük' : risk.level === 'Medium' ? 'Orta' : 'Yüksek') :
-                              risk.level
-                            }
+                            {risk.level}
                           </span>
                         </td>
                         <td className="p-4">
@@ -330,8 +373,27 @@ export default function Home() {
                             ${formatNumber(pool.tvlUsd)}
                           </div>
                         </td>
+                        <td className="p-4">
+                          {protocol ? (
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={() => handleProtocolClick(pool.project)}
+                                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all transform hover:scale-105"
+                              >
+                                🚀 {protocol.category === 'DEX' ? 'Swap' : 'Lend'}
+                              </button>
+                              <div className="text-xs text-green-400 text-center">
+                                {language === 'tr' ? 'Ücretsiz!' : 'Free!'}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 text-sm">
+                              {language === 'tr' ? 'Yakında' : 'Coming Soon'}
+                            </div>
+                          )}
+                        </td>
                       </tr>
-                    );
+                    )
                   })}
                 </tbody>
               </table>
@@ -348,9 +410,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Geri kalan kısımlar aynı, sadece birkaç text değişir... */}
-        {/* Features, CTA, Footer aynı kalacak */}
-        
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-8 mt-16 mb-16">
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
@@ -366,14 +425,14 @@ export default function Home() {
             </p>
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
-            <div className="text-4xl mb-4">🛡️</div>
+            <div className="text-4xl mb-4">🔗</div>
             <h3 className="text-xl font-bold text-white mb-4">
-              {language === 'tr' ? 'Risk Analizi' : 'Risk Analysis'}
+              {language === 'tr' ? 'Direkt Protokol Bağlantıları' : 'Direct Protocol Links'}
             </h3>
             <p className="text-gray-300">
               {language === 'tr' ?
-                'Akıllı risk skorlama sistemi ile impermanent loss ve protokol risklerini anla.' :
-                'Smart risk scoring system helps you understand impermanent loss and protocol risks.'
+                'Tek tıkla DeFi protokollerine bağlan. Güvenli ve hızlı işlemler.' :
+                'Connect to DeFi protocols with one click. Safe and fast transactions.'
               }
             </p>
           </div>
@@ -384,29 +443,29 @@ export default function Home() {
             </h3>
             <p className="text-gray-300">
               {language === 'tr' ?
-                '5 arkadaş davet et, 1 yıl premium erişim kazan. DeFi topluluğunu büyüt!' :
-                'Invite 5 friends and get 1 year premium access. Build your DeFi community!'
+                '10 arkadaş davet et, 1 yıl premium erişim kazan. Tamamen ücretsiz!' :
+                'Invite 10 friends and get 1 year premium access. Completely free!'
               }
             </p>
           </div>
         </div>
 
-        {/* Referral CTA */}
+        {/* Updated CTA */}
         <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl p-8 border border-purple-500/30">
           <div className="text-center">
-            <h3 className="text-3xl font-bold text-white mb-4">🎉 Launch Special!</h3>
+            <h3 className="text-3xl font-bold text-white mb-4">🎉 {language === 'tr' ? 'Tamamen Ücretsiz!' : 'Completely Free!'}</h3>
             <p className="text-xl text-gray-300 mb-6">
               {language === 'tr' ?
-                'İlk 1000 kullanıcı arasında ol ve SINIRSIZ ÜCRETSİZ ERİŞİM kazan' :
-                'Be among the first 1000 users and get UNLIMITED FREE ACCESS'
+                'Kayıt ol, referral kodunu paylaş ve premium özelliklere ücretsiz eriş!' :
+                'Sign up, share your referral code and get free access to premium features!'
               }
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105">
-                🚀 {language === 'tr' ? 'Ücretsiz Başla' : 'Get Free Access'}
+                🚀 {t.getStarted}
               </Link>
               <Link href="/login" className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all border border-white/20">
-                📱 {language === 'tr' ? 'Giriş Yap' : 'Login'}
+                📱 {t.login}
               </Link>
             </div>
           </div>
@@ -428,5 +487,5 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  );
+  )
 }
