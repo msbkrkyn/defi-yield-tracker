@@ -2,7 +2,114 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 // MUTLAK YOL:
-import { generateProtocolLink, protocolLinks } from '../utils/protocolLinks'
+// app/page.tsx - Inline protocol links çözümü
+// Import satırını kaldır ve bu kodu const texts = { altına ekle:
+
+// Inline protokol bağlantıları (import sorunu çözümü)
+const protocolLinks: Record<string, any> = {
+  'uniswap': { 
+    name: 'Uniswap V3', 
+    logo: '🦄', 
+    baseUrl: 'https://app.uniswap.org',
+    commission: 0.05, 
+    category: 'DEX' 
+  },
+  'uniswap-v3': { 
+    name: 'Uniswap V3', 
+    logo: '🦄', 
+    baseUrl: 'https://app.uniswap.org',
+    commission: 0.05, 
+    category: 'DEX' 
+  },
+  'aave': { 
+    name: 'Aave', 
+    logo: '👻', 
+    baseUrl: 'https://app.aave.com',
+    commission: 0.1, 
+    category: 'Lending' 
+  },
+  'aave-v2': { 
+    name: 'Aave V2', 
+    logo: '👻', 
+    baseUrl: 'https://app.aave.com',
+    commission: 0.1, 
+    category: 'Lending' 
+  },
+  'aave-v3': { 
+    name: 'Aave V3', 
+    logo: '👻', 
+    baseUrl: 'https://app.aave.com',
+    commission: 0.1, 
+    category: 'Lending' 
+  },
+  'compound': { 
+    name: 'Compound', 
+    logo: '🏛️', 
+    baseUrl: 'https://app.compound.finance',
+    commission: 0.08, 
+    category: 'Lending' 
+  },
+  'compound-v3': { 
+    name: 'Compound V3', 
+    logo: '🏛️', 
+    baseUrl: 'https://app.compound.finance',
+    commission: 0.08, 
+    category: 'Lending' 
+  },
+  'curve': { 
+    name: 'Curve Finance', 
+    logo: '🌀', 
+    baseUrl: 'https://curve.fi',
+    commission: 0.04, 
+    category: 'DEX' 
+  },
+  'balancer': { 
+    name: 'Balancer', 
+    logo: '⚖️', 
+    baseUrl: 'https://app.balancer.fi',
+    commission: 0.06, 
+    category: 'DEX' 
+  },
+  'sushiswap': { 
+    name: 'SushiSwap', 
+    logo: '🍣', 
+    baseUrl: 'https://app.sushi.com',
+    commission: 0.03, 
+    category: 'DEX' 
+  },
+  'pancakeswap': { 
+    name: 'PancakeSwap', 
+    logo: '🥞', 
+    baseUrl: 'https://pancakeswap.finance',
+    commission: 0.025, 
+    category: 'DEX' 
+  },
+  'raydium': { 
+    name: 'Raydium', 
+    logo: '☀️', 
+    baseUrl: 'https://raydium.io',
+    commission: 0.03, 
+    category: 'DEX' 
+  },
+  'orca': { 
+    name: 'Orca', 
+    logo: '🐋', 
+    baseUrl: 'https://orca.so',
+    commission: 0.02, 
+    category: 'DEX' 
+  }
+}
+
+// Inline protokol link fonksiyonu
+function generateProtocolLink(projectName: string): string {
+  const protocol = protocolLinks[projectName.toLowerCase()]
+  if (!protocol) {
+    return `https://defillama.com/protocol/${projectName}`
+  }
+  const hasQuery = protocol.baseUrl.includes('?')
+  const separator = hasQuery ? '&' : '?'
+  return `${protocol.baseUrl}${separator}ref=defi-yield-tracker`
+}
 
 // Basit dil sistemi
 const texts = {
