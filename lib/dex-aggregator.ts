@@ -1,4 +1,4 @@
-// lib/dex-aggregator.ts - %100 GERÇEK 1INCH API
+// lib/dex-aggregator.ts - BACKEND PROXY KULLANIMI
 export interface Token {
   address: string
   symbol: string
@@ -8,125 +8,134 @@ export interface Token {
 }
 
 export class DEXAggregator {
-  private baseURL = 'https://api.1inch.io/v5.0'
   private chainId: number
 
   constructor(chainId: number = 1) {
     this.chainId = chainId
   }
 
-  // GERÇEK 1inch tokens API
+  // BACKEND PROXY üzerinden token listesi
   async getTokens(): Promise<Record<string, Token>> {
     try {
-      console.log(`🔄 Fetching REAL tokens from 1inch for chain ${this.chainId}...`)
+      console.log(`🔄 Fetching tokens via backend proxy for chain ${this.chainId}...`)
       
-      const response = await fetch(`${this.baseURL}/${this.chainId}/tokens`, {
+      const response = await fetch(`/api/tokens?chainId=${this.chainId}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
+        cache: 'no-store'
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`Backend error: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log(`✅ Loaded ${Object.keys(data.tokens).length} REAL tokens from 1inch`)
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      console.log(`✅ Loaded ${Object.keys(data.tokens).length} tokens via backend`)
       
       return data.tokens
     } catch (error) {
-      console.error('❌ Failed to fetch REAL tokens from 1inch:', error)
-      throw new Error(`Failed to fetch tokens from 1inch API: ${error}`)
+      console.error('❌ Failed to fetch tokens via backend:', error)
+      throw new Error(`Failed to fetch tokens: ${error}`)
     }
   }
 
-  // GERÇEK 1inch quote API
+  // BACKEND PROXY üzerinden quote
   async getQuote(params: {
     fromTokenAddress: string
     toTokenAddress: string
     amount: string
   }): Promise<any> {
     try {
-      console.log('🔄 Getting REAL quote from 1inch API...')
+      console.log('🔄 Getting quote via backend proxy...')
       console.log('Parameters:', params)
 
       const queryParams = new URLSearchParams({
+        chainId: this.chainId.toString(),
         fromTokenAddress: params.fromTokenAddress,
         toTokenAddress: params.toTokenAddress,
         amount: params.amount,
       })
 
-      const url = `${this.baseURL}/${this.chainId}/quote?${queryParams}`
-      console.log('API URL:', url)
-
-      const response = await fetch(url, {
+      const response = await fetch(`/api/quote?${queryParams}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
+        cache: 'no-store'
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API Error Response:', errorText)
-        throw new Error(`1inch API error: ${response.status} - ${errorText}`)
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Backend error: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('✅ Got REAL quote from 1inch:', data)
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      console.log('✅ Got quote via backend:', data)
       
       return data
     } catch (error) {
-      console.error('❌ Failed to get REAL quote from 1inch:', error)
+      console.error('❌ Failed to get quote via backend:', error)
       throw error
     }
   }
 
-  // GERÇEK 1inch swap API
+  // BACKEND PROXY üzerinden swap data
   async getSwap(params: {
     fromTokenAddress: string
     toTokenAddress: string
     amount: string
     fromAddress: string
     slippage: number
-    disableEstimate?: boolean
   }): Promise<any> {
     try {
-      console.log('🔄 Getting REAL swap data from 1inch API...')
+      console.log('🔄 Getting swap data via backend proxy...')
       console.log('Swap parameters:', params)
 
       const queryParams = new URLSearchParams({
+        chainId: this.chainId.toString(),
         fromTokenAddress: params.fromTokenAddress,
         toTokenAddress: params.toTokenAddress,
         amount: params.amount,
         fromAddress: params.fromAddress,
         slippage: params.slippage.toString(),
-        disableEstimate: params.disableEstimate ? 'true' : 'false',
       })
 
-      const url = `${this.baseURL}/${this.chainId}/swap?${queryParams}`
-      console.log('Swap API URL:', url)
-
-      const response = await fetch(url, {
+      const response = await fetch(`/api/swap?${queryParams}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
+        cache: 'no-store'
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Swap API Error Response:', errorText)
-        throw new Error(`1inch swap API error: ${response.status} - ${errorText}`)
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Backend error: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('✅ Got REAL swap data from 1inch:', data)
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      console.log('✅ Got swap data via backend:', data)
       
       return data
     } catch (error) {
-      console.error('❌ Failed to get REAL swap data from 1inch:', error)
+      console.error('❌ Failed to get swap data via backend:', error)
       throw error
     }
   }
@@ -191,7 +200,7 @@ export class DEXAggregator {
     }
   }
 
-  // GERÇEK token approval
+  // Token approval
   async approveToken(
     tokenAddress: string,
     spenderAddress: string,
@@ -223,17 +232,15 @@ export class DEXAggregator {
     }
   }
 
-  // GERÇEK allowance check
+  // Check allowance
   async checkAllowance(
     tokenAddress: string,
     walletAddress: string,
     walletProvider: any
   ): Promise<string> {
     try {
-      // Get spender address from 1inch
-      const spenderResponse = await fetch(`${this.baseURL}/${this.chainId}/approve/spender`)
-      const spenderData = await spenderResponse.json()
-      const spenderAddress = spenderData.address
+      // Use fixed spender address for 1inch
+      const spenderAddress = '0x1111111254fb6c44bAC0beD2854e76F90643097d' // 1inch router
 
       // ERC20 allowance function call
       const allowanceData = '0xdd62ed3e' + 
@@ -257,7 +264,7 @@ export class DEXAggregator {
     }
   }
 
-  // GERÇEK transaction waiting
+  // Wait for transaction
   async waitForTransaction(txHash: string, walletProvider: any): Promise<any> {
     return new Promise((resolve, reject) => {
       const checkTransaction = async () => {

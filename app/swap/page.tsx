@@ -156,13 +156,12 @@ export default function ProductionSwapPage() {
       
       // Get REAL swap transaction data from 1inch API
       const swapResult = await dexAggregator.getSwap({
-        fromTokenAddress: fromToken.address,
-        toTokenAddress: toToken.address,
-        amount: amount,
-        fromAddress: address,
-        slippage: slippage,
-        disableEstimate: false
-      })
+  fromTokenAddress: fromToken.address,
+  toTokenAddress: toToken.address,
+  amount: amount,
+  fromAddress: address,
+  slippage: slippage
+})
       
       console.log('✅ Got REAL swap data from 1inch:', swapResult)
       
